@@ -40,6 +40,18 @@
 各品牌菜单名称可能不同，故障处理见
 `skill/android-ad-optimizer/references/adb-onboarding.md`。
 
+### 真实设备截图：一加 Ace 5 / ColorOS 15
+
+截图只用于说明入口位置；其他品牌和系统版本可能有不同的菜单名称。截图中的 USB 调试已开启，使用完成后应按流程手动关闭。
+
+开发者选项入口：
+
+![ColorOS 开发者选项](docs/images/oneplus-developer-options.png)
+
+USB 调试入口：
+
+![ColorOS USB 调试](docs/images/oneplus-usb-debugging.png)
+
 脚本只依赖 Python 标准库和 Android SDK Platform Tools：
 
 ```powershell
