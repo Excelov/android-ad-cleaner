@@ -11,6 +11,7 @@ Use this skill when the user asks to reduce Android system ads, promotional noti
 
 ## Safety contract
 
+- Treat ADB onboarding as part of the workflow. Before touching device settings, confirm that `adb` is installed, the user has enabled USB debugging, the phone is unlocked, and the device appears as authorized `device`.
 - Start with `devices` and `inspect`; identify brand, model, Android version, ROM version, installed apps, disabled packages, and relevant settings.
 - Create a backup before any mutation. Keep the backup path in the response.
 - Show a concrete plan before mutation. The user must explicitly authorize the plan before `apply --yes`, package suspension, or desktop changes.
@@ -21,34 +22,91 @@ Use this skill when the user asks to reduce Android system ads, promotional noti
 - After every mutation, verify the resulting channel importance or switch state.
 - Explain that reducing recommendations or tracking does not remove all in-app advertising.
 
-## Default workflow
+## Guided workflow
 
-1. Run:
+Run this as a staged conversation. Stop at each gate that requires a phone-side action or user confirmation; do not silently continue.
 
-   ```text
-   python scripts/android_ad_optimizer.py devices
-   python scripts/android_ad_optimizer.py inspect
-   python scripts/android_ad_optimizer.py backup
-   python scripts/android_ad_optimizer.py plan
-   ```
+### 0. Explain the two sides
 
-2. Report the device identity, current disabled packages, useful notifications that will remain, and exact promotional channels proposed for change.
-3. If the user authorizes the listed plan, run:
+Tell the user which actions happen on the computer and which happen on the phone:
 
-   ```text
-   python scripts/android_ad_optimizer.py apply --yes
-   ```
+| Stage | User confirms or does on the phone | Agent does on the computer |
+|---|---|---|
+| Connect | Unlock screen, enable Developer options and USB debugging, approve the RSA fingerprint | Check `adb devices` |
+| Inspect | Keep the phone connected | Read device identity, apps, settings, notification channels |
+| Prepare | Review the proposed changes | Create backup and print an exact plan |
+| Apply | Explicitly authorize the displayed plan; keep screen awake for UI-based channel changes | Apply only reversible, channel-specific changes |
+| Verify | Leave the device connected if asked | Re-read each changed channel and report preserved/skipped items |
+| Finish | Manually turn off USB debugging | Print the final reminder; never disable it silently |
 
-4. Run `inspect` again and report changed, preserved, skipped, and unverifiable items.
-5. For desktop layout, ART+ icons, app-internal recommendation switches, or vendor-specific pages, inspect the live UI and propose exact actions. Ask before moving icons. Do not claim success from an ADB setting key unless the UI or a read-back proves it.
-6. For uninstall candidates, list names and impact first; wait for separate confirmation.
-7. Finish with a reminder that USB debugging can be turned off after the work:
+### 1. Onboard ADB and authorize the computer
 
-   ```text
-   python scripts/android_ad_optimizer.py finish
-   ```
+Before running device inspection:
 
-`finish` only reports the safe manual next step by default. It must not silently disable USB debugging because that disconnects the device.
+1. Check whether `adb` is available. If it is missing, stop and tell the user to install the official Android SDK Platform-Tools, add its folder to `PATH` (or provide its full path), then retry. Do not recommend random driver or APK downloads.
+2. Ask the user to unlock the phone and connect it with a USB data cable.
+3. On the phone, open `Settings > About phone` and tap `Build number` repeatedly until Developer options are enabled. The exact menu can vary by vendor.
+4. Open `Settings > System` or `Additional settings > Developer options`, enable `USB debugging`, and confirm the phone-side warning.
+5. Run `adb devices`. If Android shows `Allow USB debugging?`, have the user verify the computer fingerprint. Select `Always allow from this computer` only when they trust this computer; otherwise approve only for this session or cancel.
+6. Run `devices` again and continue only when exactly one intended device has state `device`. Ask the user to resolve `no devices`, `unauthorized`, `offline`, or multiple-device results before any inspection or mutation.
+7. Tell the user not to accept unrelated prompts such as file access, app installation, screen sharing, or OEM services unless separately needed.
+
+Read [references/adb-onboarding.md](references/adb-onboarding.md) when `adb` is missing, authorization does not complete, the device is `offline`, or the cable/device disconnects.
+
+### 2. Read-only inspection
+
+After the authorized-device gate, run:
+
+```text
+python scripts/android_ad_optimizer.py devices
+python scripts/android_ad_optimizer.py inspect
+```
+
+Report brand, model, Android/ROM version, installed apps, disabled packages, relevant settings, and any uncertainty. Do not infer that an unused app is safe to remove.
+
+### 3. Backup and plan
+
+Run:
+
+```text
+python scripts/android_ad_optimizer.py backup
+python scripts/android_ad_optimizer.py plan
+```
+
+Report the backup path, device identity, useful notifications that will remain, and exact promotional channels proposed for change. Classify every proposed action as:
+
+- read-only;
+- reversible and ready for confirmation;
+- not automated and requiring a manual phone/UI review;
+- not in scope.
+
+### 4. Explicit confirmation before mutation
+
+Ask the user to authorize the exact displayed plan. Do not treat a general request to reduce ads as authorization for a new package, app, desktop-layout, or uninstall action. If the user has not confirmed, stop after the plan.
+
+After authorization, run:
+
+```text
+python scripts/android_ad_optimizer.py apply --yes
+```
+
+If UI automation is needed, tell the user to keep the screen unlocked and visible, and stop if the UI does not match the expected page. Do not guess taps.
+
+### 5. Verify and finish
+
+Run `inspect` again. Report changed, preserved, skipped, and unverifiable items. Verify each changed channel by reading back its importance/switch state; if read-back is unavailable, say so.
+
+For desktop layout, ART+ icons, app-internal recommendation switches, or vendor-specific pages, inspect the live UI and propose exact actions. Ask before moving icons. Do not claim success from an ADB setting key unless the UI or a read-back proves it.
+
+For uninstall candidates, list names and impact first; wait for separate confirmation. The current skill does not uninstall apps.
+
+Finish with:
+
+```text
+python scripts/android_ad_optimizer.py finish
+```
+
+Then tell the user to manually turn off `USB debugging` in Developer options and unplug the cable. `finish` only reports this safe manual next step; it must not silently disable USB debugging because that disconnects the device.
 
 ## Scope
 

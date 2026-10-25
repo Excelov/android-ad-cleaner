@@ -24,6 +24,22 @@
 请使用 android-ad-optimizer，检查连接的安卓设备，先给出备份和修改计划。
 ```
 
+## 完整流程
+
+这个 Skill 不假设 ADB 已经配置好。首次使用时，按以下顺序操作：
+
+1. 电脑安装官方 Android SDK Platform-Tools，并确保 `adb` 可在终端运行。
+2. 手机解锁后接入 USB 数据线。
+3. 手机打开 `设置 > 关于手机`，连续点击 `版本号/Build number` 开启开发者选项。
+4. 在 `系统` 或 `其他设置 > 开发者选项` 中开启 `USB 调试`。
+5. 看到“允许 USB 调试？”时核对电脑指纹；只对信任的电脑勾选“始终允许”，不要接受无关的文件访问、安装或投屏提示。
+6. Agent 运行 `devices`，只有状态为 `device` 且目标唯一时才继续；`unauthorized`、`offline`、无设备或多设备都会暂停并提示处理。
+7. Agent 先只读检查，再备份并输出精确计划；用户确认计划后才执行可恢复修改。
+8. 修改后逐项复核，最后用户手动关闭 USB 调试并拔线。
+
+各品牌菜单名称可能不同，故障处理见
+`skill/android-ad-optimizer/references/adb-onboarding.md`。
+
 脚本只依赖 Python 标准库和 Android SDK Platform Tools：
 
 ```powershell
